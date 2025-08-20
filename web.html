@@ -102,6 +102,29 @@
   </div>
 
   <script>
+    loadTasks();
+
+        function loadTasks() {
+            const tasks = getTasksFromLocalStorage();
+            tasks.forEach(task => {
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    ${task.text} ${task.date}
+                    <button class="delete-btn" onclick="deleteTask(this)">Delete</button>
+                `;
+                document.getElementById("taskList").appendChild(li);
+            });
+        }
+
+        function getTasksFromLocalStorage() {
+            try {
+                const tasks = localStorage.getItem("tasks");
+                return tasks ? JSON.parse(tasks) : [];
+            } catch (error) {
+                console.error("Error getting tasks from local storage:", error);
+                return [];
+            }
+        }
     function addTask() {
       const taskInput = document.getElementById("taskInput");
       const taskText = taskInput.value.trim();
@@ -117,7 +140,8 @@
         alert("Please select a due date.");
         return;
       }
-
+    const task ={text: taskText, date: taskdate };
+    saveTaskToLocalStorage(task);
       const li = document.createElement("li");
       li.innerHTML = `
         ${taskText}
@@ -127,12 +151,32 @@
 
       document.getElementById("taskList").appendChild(li);
       taskInput.value = "";
+      dateinput.value = "";
     }
 
     function deleteTask(button) {
       const li = button.parentElement;
+      const taskText = li.textcontent.trim().split(' ')[0];
+      const taskDate = li.textcontent.trim().split(' ')[1];
+      
       li.remove();
-    }
+
+
+            // Remove task from local storage
+            removeTaskFromLocalStorage(taskText, taskDate);
+        }
+
+        function saveTaskToLocalStorage(task) {
+            const tasks = getTasksFromLocalStorage();
+            tasks.push(task);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function removeTaskFromLocalStorage(taskText, taskDate) {
+            const tasks = getTasksFromLocalStorage();
+            const filteredTasks = tasks.filter(task => task.text !== taskText || task.date !== taskDate);
+            localStorage.setItem("tasks", JSON.stringify(filteredTasks))
+        }
   </script>
 </body>
 </html>
