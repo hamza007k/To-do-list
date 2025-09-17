@@ -79,12 +79,31 @@
       align-items: center;
     }
 
+    .task-text {
+      flex-grow: 1;
+      margin-right: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+
     .delete-btn {
       background: red;
       border: none;
       color: white;
       padding: 5px 10px;
       border-radius: 5px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .checkbox {
+      margin-right: 10px;
       cursor: pointer;
     }
 
@@ -104,27 +123,32 @@
   <script>
     loadTasks();
 
-        function loadTasks() {
-            const tasks = getTasksFromLocalStorage();
-            tasks.forEach(task => {
-                const li = document.createElement("li");
-                li.innerHTML = `
-                    ${task.text} ${task.date}
-                    <button class="delete-btn" onclick="deleteTask(this)">Delete</button>
-                `;
-                document.getElementById("taskList").appendChild(li);
-            });
-        }
+    function loadTasks() {
+        const tasks = getTasksFromLocalStorage();
+        // Sort tasks by date ascending (earlier dates first)
+        tasks.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const taskList = document.getElementById("taskList");
+        taskList.innerHTML = ""; // Clear existing tasks
+        tasks.forEach(task => {
+            const li = createTaskElement(task);
+            taskList.appendChild(li);
+        });
+    }
 
-        function getTasksFromLocalStorage() {
-            try {
-                const tasks = localStorage.getItem("tasks");
-                return tasks ? JSON.parse(tasks) : [];
-            } catch (error) {
-                console.error("Error getting tasks from local storage:", error);
-                return [];
-            }
+    function getTasksFromLocalStorage() {
+        try {
+            const tasks = localStorage.getItem("tasks");
+            return tasks ? JSON.parse(tasks) : [];
+        } catch (error) {
+            console.error("Error getting tasks from local storage:", error);
+            return [];
         }
+    }
+
+    function saveTasksToLocalStorage(tasks) {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
     function addTask() {
       const taskInput = document.getElementById("taskInput");
       const taskText = taskInput.value.trim();
@@ -133,50 +157,95 @@
       const taskdate = dateinput.value.trim();
 
       if (taskText === "") {
-        alert("Please enter a task .");
+        alert("Please enter a task.");
         return;
       }
-    else  if (taskdate === "") {
+      if (taskdate === "") {
         alert("Please select a due date.");
         return;
       }
-    const task ={text: taskText, date: taskdate };
-    saveTaskToLocalStorage(task);
-      const li = document.createElement("li");
-      li.innerHTML = `
-        ${taskText}
-        ${taskdate} 
-        <button class="delete-btn" onclick="deleteTask(this)">Delete</button>
-        `;
 
-      document.getElementById("taskList").appendChild(li);
+      const task = {text: taskText, date: taskdate, completed: false};
+      saveTaskToLocalStorage(task);
+
+      // Reload and render the sorted task list
+      loadTasks();
+
       taskInput.value = "";
       dateinput.value = "";
     }
 
-    function deleteTask(button) {
-      const li = button.parentElement;
-      const taskText = li.textcontent.trim().split(' ')[0];
-      const taskDate = li.textcontent.trim().split(' ')[1];
-      
+    function createTaskElement(task) {
+      const li = document.createElement("li");
+
+      // Create checkbox
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "checkbox";
+      checkbox.checked = task.completed;
+      checkbox.addEventListener("change", function() {
+        toggleTaskCompletion(li, task);
+      });
+
+      // Create task text span
+      const taskSpan = document.createElement("span");
+      taskSpan.className = "task-text";
+      taskSpan.textContent = `${task.text} (${task.date})`;
+      if (task.completed) {
+        taskSpan.classList.add("completed");
+      }
+
+      // Create delete button
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.textContent = "Delete";
+      deleteBtn.addEventListener("click", function() {
+        deleteTask(li, task);
+      });
+
+      li.appendChild(checkbox);
+      li.appendChild(taskSpan);
+      li.appendChild(deleteBtn);
+
+      return li;
+    }
+
+    function toggleTaskCompletion(li, task) {
+      const taskSpan = li.querySelector(".task-text");
+      task.completed = !task.completed;
+      if (task.completed) {
+        taskSpan.classList.add("completed");
+      } else {
+        taskSpan.classList.remove("completed");
+      }
+      updateTaskInLocalStorage(task);
+    }
+
+    function updateTaskInLocalStorage(updatedTask) {
+      const tasks = getTasksFromLocalStorage();
+      const index = tasks.findIndex(task => task.text === updatedTask.text && task.date === updatedTask.date);
+      if (index !== -1) {
+        tasks[index].completed = updatedTask.completed;
+        saveTasksToLocalStorage(tasks);
+      }
+    }
+
+    function saveTaskToLocalStorage(task) {
+        const tasks = getTasksFromLocalStorage();
+        tasks.push(task);
+        saveTasksToLocalStorage(tasks);
+    }
+
+    function deleteTask(li, task) {
       li.remove();
+      removeTaskFromLocalStorage(task.text, task.date);
+    }
 
-
-            // Remove task from local storage
-            removeTaskFromLocalStorage(taskText, taskDate);
-        }
-
-        function saveTaskToLocalStorage(task) {
-            const tasks = getTasksFromLocalStorage();
-            tasks.push(task);
-            localStorage.setItem("tasks", JSON.stringify(tasks));
-        }
-
-        function removeTaskFromLocalStorage(taskText, taskDate) {
-            const tasks = getTasksFromLocalStorage();
-            const filteredTasks = tasks.filter(task => task.text !== taskText || task.date !== taskDate);
-            localStorage.setItem("tasks", JSON.stringify(filteredTasks))
-        }
+    function removeTaskFromLocalStorage(taskText, taskDate) {
+        const tasks = getTasksFromLocalStorage();
+        const filteredTasks = tasks.filter(task => task.text !== taskText || task.date !== taskDate);
+        saveTasksToLocalStorage(filteredTasks);
+    }
   </script>
 </body>
 </html>
